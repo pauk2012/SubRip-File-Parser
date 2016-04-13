@@ -383,6 +383,10 @@ class srtFile{
 		$sub_count = sizeof($keys);
 		$count = 0; // useful if 2 cues start at the same time code
 		foreach($this->subs as $sub){
+
+			/**
+			 * @var $sub srtFileEntry
+			 */
 			$tmp[srtFileEntry::tc2ms($sub->getStartTC()).'.'.$count] = $sub;
 			$count++;
 		}
@@ -650,5 +654,51 @@ class srtFile{
 		}
 
 		file_put_contents($filename, $tmp);
+	}
+
+
+	public function mergeOverlaps()
+	{
+		$subCount = count($this->subs);
+
+		$resultSubTitles = [$this->subs[0]];
+		/* @var $prevSub srtFileEntry  */
+
+		for($i=1; $i<$subCount; $i++)
+		{
+			$sub = $this->subs[$i];
+
+			$prevSub = end($resultSubTitles);
+			/* @var $sub srtFileEntry  */
+
+
+			$calculatedStart = min($prevSub->getStart(), $sub->getStart());
+			$calculatedStop = max($prevSub->getStop(), $sub->getStop());
+			$calculatedDiff = $calculatedStop - $calculatedStart;
+
+
+
+
+			if($calculatedDiff <  ($sub->getStop() - $sub->getStart() + $prevSub->getStop() - $prevSub->getStart())) {
+
+				if ($prevSub->getStart() <= $sub->getStart()) {
+					$prevSub->setText($prevSub->getText() . "\n" . $sub->getText());
+				} else {
+					$prevSub->setText($sub->getText() . "\n" . $prevSub->getText() );
+				}
+
+				$prevSub->setStart($calculatedStart);
+				$prevSub->setStop($calculatedStop);
+
+			} else {
+
+				$resultSubTitles[] = $sub;
+
+			}
+
+		}
+		$this->subs = $resultSubTitles;
+
+
 	}
 }
